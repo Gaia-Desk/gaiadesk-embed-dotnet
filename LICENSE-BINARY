@@ -9,10 +9,17 @@ and `gaiadesk-native` (PyPI), including every `.node`, `.so`, `.pyd` and
 program, however it is distributed: in the `gaiadesk-cli-<version>-<platform>`
 archives on GaiaDesk's releases, in the npm packages `@gaiadesk/cli` and
 `@gaiadesk/cli-<platform>`, through GaiaDesk's install scripts and Homebrew
-tap, or beside the GaiaDesk app (together, the "Binary"). It does not cover
-the open-source GaiaDesk SDKs, tools, scripts and documentation (`@gaiadesk/sdk`,
-`@gaiadesk/mcp`, `gaiadesk`, the gaiadesk-cli repository's install scripts and
-docs), which carry their own MIT licence.
+tap, or beside the GaiaDesk app, and the compiled GaiaDesk embed library
+(`libgaiadesk_embed`): the `GaiaDeskEmbedFFI` XCFramework, the
+`gaiadesk_embed` `.dll`, `.so` and `.dylib` files, and the `.node` files of
+the npm packages `@gaiadesk/embed-native-<platform>`, however they are
+distributed, including inside the `GaiaDesk.Embed` NuGet package (together,
+the "Binary"). It does not cover the open-source GaiaDesk SDKs, wrappers,
+tools, scripts and documentation (`@gaiadesk/sdk`, `@gaiadesk/mcp`,
+`gaiadesk`, `@gaiadesk/embed`, the TypeScript of `@gaiadesk/embed-native`,
+the `GaiaDeskEmbed` Swift package's and `GaiaDesk.Embed`'s sources, the
+gaiadesk-cli repository's install scripts and docs), which carry their own MIT
+licence.
 
 1. Grant. You may install, copy and run the Binary, free of charge, solely to
    use GaiaDesk services and software: in your own programs, scripts, agents
@@ -20,7 +27,12 @@ docs), which carry their own MIT licence.
 
 2. Redistribution. You may redistribute the Binary only unmodified, inside the
    package it was published in (or as a dependency your own software installs
-   from the official registries), with this licence included.
+   from the official registries), with this licence included. The embed
+   library may also be redistributed inside your own application — linked
+   into it statically or dynamically, or shipped beside it — unmodified, with
+   this licence included in your application's notices; linking it into your
+   application does not by itself modify the Binary or create a derivative
+   work of it for section 3(b).
 
 3. Restrictions. You may not:
    (a) reverse engineer, decompile or disassemble the Binary, or otherwise try
