@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GaiaDesk.Embed</RootNamespace>
+    <AssemblyName>GaiaDesk.Embed</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsTrimmable>true</IsTrimmable>
+
+    <PackageId>GaiaDesk.Embed</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>GaiaDesk</Authors>
+    <Company>GaiaDesk</Company>
+    <Description>A "Get help" button for your Windows desktop app: share your app's window with your support team through GaiaDesk, with consent, masking and optional guided input. .NET wrapper over the native libgaiadesk_embed library.</Description>
+    <PackageTags>gaiadesk;remote-support;screen-sharing;cobrowse;winforms;wpf</PackageTags>
+    <PackageProjectUrl>https://github.com/Gaia-Desk/gaiadesk-embed-dotnet</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Gaia-Desk/gaiadesk-embed-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <!-- The wrapper is MIT; the native binary it carries is under LICENSE-BINARY (packed below). -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)..\..\</RepoRoot>
+    <NativeWinX64>$(RepoRoot)runtimes\win-x64\native\gaiadesk_embed.dll</NativeWinX64>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GaiaDesk.Embed.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(RepoRoot)README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(RepoRoot)LICENSE" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(RepoRoot)LICENSE-BINARY" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!-- The native library (scripts/fetch-binary.ps1 puts it here). Packed for
+       NuGet consumers, and copied beside projects that reference this one. -->
+  <ItemGroup Condition="Exists('$(NativeWinX64)')">
+    <None Include="$(NativeWinX64)" Pack="true" PackagePath="runtimes/win-x64/native/" Link="gaiadesk_embed.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+</Project>

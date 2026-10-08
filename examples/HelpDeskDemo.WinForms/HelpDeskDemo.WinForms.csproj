@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Windows only: not in GaiaDesk.Embed.sln, so the library and tests build
+       anywhere. Build it with: dotnet build examples/HelpDeskDemo.WinForms -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <!-- Mask rects are in GetWindowRect units: keep WinForms in physical pixels too. -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RootNamespace>HelpDeskDemo</RootNamespace>
+    <AssemblyName>HelpDeskDemo</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GaiaDesk.Embed\GaiaDesk.Embed.csproj" />
+  </ItemGroup>
+
+</Project>

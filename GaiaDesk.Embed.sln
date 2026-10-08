@@ -1,0 +1,36 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6B1D4C2E-0A51-4F63-9E1C-1D2A0E4B7C01}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GaiaDesk.Embed", "src\GaiaDesk.Embed\GaiaDesk.Embed.csproj", "{3F7E9A21-5C4B-4D8E-A6F2-0B9C1D2E3F41}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{8C2E5A13-7D64-4B9F-8E0A-2F3B4C5D6E02}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GaiaDesk.Embed.Tests", "tests\GaiaDesk.Embed.Tests\GaiaDesk.Embed.Tests.csproj", "{9D4F6B35-1E72-4CA0-B7D3-3A4B5C6D7E52}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3F7E9A21-5C4B-4D8E-A6F2-0B9C1D2E3F41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F7E9A21-5C4B-4D8E-A6F2-0B9C1D2E3F41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F7E9A21-5C4B-4D8E-A6F2-0B9C1D2E3F41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F7E9A21-5C4B-4D8E-A6F2-0B9C1D2E3F41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D4F6B35-1E72-4CA0-B7D3-3A4B5C6D7E52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D4F6B35-1E72-4CA0-B7D3-3A4B5C6D7E52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D4F6B35-1E72-4CA0-B7D3-3A4B5C6D7E52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D4F6B35-1E72-4CA0-B7D3-3A4B5C6D7E52}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3F7E9A21-5C4B-4D8E-A6F2-0B9C1D2E3F41} = {6B1D4C2E-0A51-4F63-9E1C-1D2A0E4B7C01}
+		{9D4F6B35-1E72-4CA0-B7D3-3A4B5C6D7E52} = {8C2E5A13-7D64-4B9F-8E0A-2F3B4C5D6E02}
+	EndGlobalSection
+EndGlobal

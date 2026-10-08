@@ -1,0 +1,16 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+*.nupkg
+*.snupkg
+artifacts/
+
+# The native library comes from releases (scripts/fetch-binary.ps1), never the repo.
+runtimes/**/*.dll
+runtimes/**/*.dylib
+runtimes/**/*.so
+*.zip
