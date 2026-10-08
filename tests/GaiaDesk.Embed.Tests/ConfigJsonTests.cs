@@ -41,9 +41,12 @@ public class ConfigJsonTests
             WindowId = (nint)0x1234,
             Guided = true,
             Fps = 20,
+            Masks = new[] { new EmbedRect(10, 20, 100, 30) },
         };
         var o = Parse(opts.ToConfigJson(true));
-        Assert.Equal(new[] { "embed_token", "consent_granted", "server", "company", "capture", "window_id", "guided", "fps" }, Keys(o));
+        Assert.Equal(new[] { "embed_token", "consent_granted", "server", "company", "capture", "window_id", "guided", "fps", "masks" }, Keys(o));
+        var m = o.GetProperty("masks")[0];
+        Assert.Equal((10.0, 20.0, 100.0, 30.0), (m.GetProperty("x").GetDouble(), m.GetProperty("y").GetDouble(), m.GetProperty("w").GetDouble(), m.GetProperty("h").GetDouble()));
         Assert.Equal("https://support.example.com", o.GetProperty("server").GetString());
         Assert.Equal("Acme \"Desk\"", o.GetProperty("company").GetString());
         Assert.Equal("screen", o.GetProperty("capture").GetString());

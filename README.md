@@ -51,10 +51,14 @@ void GetHelp_Click(object? sender, EventArgs e)
                MessageBoxButtons.YesNo) == DialogResult.Yes;
     if (!agreed) return;
 
+    // Mask the card number panel from the very first frame.
+    var s = cardPanel.RectangleToScreen(cardPanel.ClientRectangle);
+    var card = EmbedRect.FromScreenRect(Handle, (s.X, s.Y, s.Width, s.Height));
+
     try
     {
         help = GaiaDeskEmbed.Start(
-            new EmbedOptions { EmbedToken = embedToken, Company = "Acme", WindowId = Handle },
+            new EmbedOptions { EmbedToken = embedToken, Company = "Acme", WindowId = Handle, Masks = new[] { card } },
             consentGranted: true,
             OnHelpEvent,
             SynchronizationContext.Current); // events arrive on the UI thread
@@ -64,10 +68,6 @@ void GetHelp_Click(object? sender, EventArgs e)
         statusLabel.Text = $"Could not start: {ex.Message} ({ex.Code})";
         return;
     }
-
-    // Mask the card number panel.
-    var s = cardPanel.RectangleToScreen(cardPanel.ClientRectangle);
-    help.SetMaskedRects(new[] { EmbedRect.FromScreenRect(Handle, (s.X, s.Y, s.Width, s.Height)) });
 }
 
 void OnHelpEvent(EmbedEvent e)
@@ -136,7 +136,9 @@ Refusals throw `GaiaDeskEmbedException`; `Code` is stable: `consent_required`, `
 
 ## Masking
 
-`SetMaskedRects` takes rects relative to the top-left of the shared window **as `GetWindowRect`
+Pass the regions you already know in `EmbedOptions.Masks` when you start: an agent can join
+straight away, and only start-time masks are guaranteed to cover the first frame. Afterwards,
+`SetMaskedRects` replaces them. Both take rects relative to the top-left of the shared window **as `GetWindowRect`
 reports it** (so including the title bar and borders), in its units. `EmbedRect.FromScreenRect
 (windowHandle, screenRect)` converts a screen rect for you (Windows only; no WinForms or WPF
 reference needed). Each call replaces the earlier set; an empty list clears it. Call it again

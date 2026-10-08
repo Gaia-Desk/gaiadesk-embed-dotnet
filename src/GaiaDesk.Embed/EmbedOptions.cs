@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -43,6 +44,14 @@ public sealed record EmbedOptions
     /// <summary>Frames per second, 1 to 30; default (null) is the library's 15.</summary>
     public int? Fps { get; init; }
 
+    /// <summary>
+    /// Regions painted out from the very first frame (see <see cref="EmbedRect"/>).
+    /// Pass the ones you already know here: an agent can join straight away, and
+    /// only start-time masks are guaranteed to cover the first frame.
+    /// <see cref="GaiaDeskEmbed.SetMaskedRects"/> replaces them later.
+    /// </summary>
+    public IReadOnlyList<EmbedRect>? Masks { get; init; }
+
     internal static string CaptureName(CaptureMode c) => c switch
     {
         CaptureMode.Window => "window",
@@ -81,6 +90,20 @@ public sealed record EmbedOptions
             if (Fps is { } fps)
             {
                 w.WriteNumber("fps", fps);
+            }
+            if (Masks is { Count: > 0 } masks)
+            {
+                w.WriteStartArray("masks");
+                foreach (var r in masks)
+                {
+                    w.WriteStartObject();
+                    w.WriteNumber("x", r.X);
+                    w.WriteNumber("y", r.Y);
+                    w.WriteNumber("w", r.Width);
+                    w.WriteNumber("h", r.Height);
+                    w.WriteEndObject();
+                }
+                w.WriteEndArray();
             }
             w.WriteEndObject();
         }

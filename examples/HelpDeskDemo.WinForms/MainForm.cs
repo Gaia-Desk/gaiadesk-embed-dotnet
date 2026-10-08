@@ -160,13 +160,14 @@ internal sealed class MainForm : Form
             Company = "Acme",
             WindowId = Handle,
             Guided = guided,
+            // The card's mask goes in the start options: it covers the very first frame.
+            Masks = new[] { RectOf(_card) },
         };
         try
         {
             _help = GaiaDeskEmbed.Start(options, consentGranted: true, OnEvent, SynchronizationContext.Current);
             _getHelp.Enabled = false;
             _stop.Enabled = true;
-            UpdateMask();
         }
         catch (GaiaDeskEmbedException e)
         {
