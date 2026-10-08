@@ -74,4 +74,20 @@ public class NativeLibraryTests
     {
         Assert.Equal("bad_config", Refused(new EmbedOptions { EmbedToken = Token, WindowId = 0 }, consent: true).Code);
     }
+
+    [NativeFact]
+    public void Masks_are_a_known_start_key()
+    {
+        // The library refuses unknown keys as bad_config before it reads the
+        // token: bad_token here means it parsed the masks.
+        var masks = new[] { new EmbedRect(10, 20, 100, 30) };
+        Assert.Equal("bad_token", Refused(new EmbedOptions { EmbedToken = "nope", Masks = masks }, consent: true).Code);
+    }
+
+    [NativeFact]
+    public void Negative_mask_is_refused()
+    {
+        var masks = new[] { new EmbedRect(0, 0, -1, 5) };
+        Assert.Equal("bad_config", Refused(new EmbedOptions { EmbedToken = Token, Masks = masks }, consent: true).Code);
+    }
 }
