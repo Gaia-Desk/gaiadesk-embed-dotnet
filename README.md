@@ -1,8 +1,14 @@
 # GaiaDesk.Embed
 
-A **"Get help" button for your Windows desktop app**. Your customer clicks it and agrees; your
-app's window is shared with **your** support team, who see it in the GaiaDesk console and, if you
-allow it, guide it: click and type **inside your app only**, while it is in front.
+[![CI](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/actions/workflows/ci.yml/badge.svg)](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Gaia-Desk/gaiadesk-embed-dotnet)](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/latest)
+[![License: MIT + binary licence](https://img.shields.io/badge/license-MIT%20%2B%20binary%20licence-blue)](#licence)
+
+A **"Get help" button for your Windows desktop app**: in-app remote support and a screen sharing
+SDK for .NET (C#, WinForms, WPF), for customer support with optional guided control. Your customer
+clicks it and agrees; your app's window is shared with **your** support team, who see it in the
+GaiaDesk console and, if you allow it, guide it: click and type **inside your app only**, while it
+is in front.
 
 - An idiomatic .NET 8 API (`GaiaDeskEmbed.Start(...)`, events as records, `IDisposable`) over the
   native `libgaiadesk_embed` library. Works with WinForms, WPF and anything else with a window.
@@ -13,6 +19,23 @@ allow it, guide it: click and type **inside your app only**, while it is in fron
 - Only your app's window is captured unless you ask for the screen. Guided input is off unless
   you allow it **and** your backend made a `cobrowse` session; it lands only in your app's own
   windows, and the customer can pause it or stop the whole session at any time.
+
+## Install
+
+The package is attached to this repository's
+[GitHub release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.1.0)
+(`GaiaDesk.Embed.0.1.0.nupkg`, with its `.sha256`). Download it into a folder and use that folder as
+a package source:
+
+```sh
+mkdir -p packages
+curl -L -o packages/GaiaDesk.Embed.0.1.0.nupkg https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/download/v0.1.0/GaiaDesk.Embed.0.1.0.nupkg
+dotnet add package GaiaDesk.Embed --version 0.1.0 --source ./packages
+```
+
+(Or add `packages/` permanently with `dotnet nuget add source ./packages -n gaiadesk-local`.)
+
+Once published to NuGet.org:
 
 ```sh
 dotnet add package GaiaDesk.Embed
@@ -213,6 +236,13 @@ Tests that need the native library skip when it cannot be loaded; point `GAIADES
 at a directory holding it to run them (they only exercise refusals and never start a session).
 The WinForms example is not in the solution, so the library and tests build anywhere:
 `dotnet build examples/HelpDeskDemo.WinForms` on Windows.
+
+## Links
+
+- Package: `GaiaDesk.Embed.0.1.0.nupkg` on the [v0.1.0 release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.1.0) (NuGet.org once published)
+- Guide: [Embedding GaiaDesk](https://gaiadesk.net/docs/embedding-gaiadesk) on gaiadesk.net
+- Embed SDKs: [Web](https://github.com/Gaia-Desk/gaiadesk-embed) · [Electron](https://github.com/Gaia-Desk/gaiadesk-embed-electron) · [macOS (Swift)](https://github.com/Gaia-Desk/gaiadesk-embed-swift) · [C/C++ and Qt](https://github.com/Gaia-Desk/gaiadesk-embed-cpp) · [.NET](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet) · [iOS](https://github.com/Gaia-Desk/gaiadesk-embed-ios) · [Android](https://github.com/Gaia-Desk/gaiadesk-embed-android) · [React Native](https://github.com/Gaia-Desk/gaiadesk-embed-react-native) · [Flutter](https://github.com/Gaia-Desk/gaiadesk-embed-flutter)
+- [Changelog](CHANGELOG.md) · [Security policy](https://github.com/Gaia-Desk/.github/blob/main/SECURITY.md)
 
 ## Licence
 
