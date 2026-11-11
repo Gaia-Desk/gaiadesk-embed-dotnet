@@ -43,7 +43,7 @@ public sealed class GaiaDeskEmbed : IDisposable
 
     /// <summary>
     /// Start sharing. <paramref name="consentGranted"/> must be your user's
-    /// answer to a consent dialog (<see cref="RequestConsent"/>, or your own):
+    /// answer to a consent dialog (<see cref="RequestConsent(string, CaptureMode, bool)"/>, or your own):
     /// the library refuses without it.
     /// </summary>
     /// <param name="options">The session: embed token, window, capture, guided, …</param>
@@ -189,7 +189,42 @@ public sealed class GaiaDeskEmbed : IDisposable
         }
     }
 
-    /// <summary>The native library's version ("0.1.0").</summary>
+    /// <summary>
+    /// The consent dialog in your look: <see cref="RequestConsent(string, CaptureMode, bool)"/>
+    /// plus your colour and logo (the library's <c>gd_embed_show_consent_ex</c>, 0.2.0).
+    /// </summary>
+    /// <exception cref="GaiaDeskEmbedException">
+    /// <c>bad_config</c>: a colour or logo that is refused (no dialog is shown; this is never a decline).
+    /// </exception>
+    public static bool? RequestConsent(ConsentOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var o = Marshal.StringToCoTaskMemUTF8(options.ToJson());
+        try
+        {
+            switch (NativeMethods.ShowConsentEx(o))
+            {
+                case 1:
+                    return true;
+                case 0:
+                    // Thread-local: read on this thread, right after the call.
+                    var err = NativeMethods.Utf8(NativeMethods.LastError());
+                    if (err.Length > 0 && GaiaDeskEmbedException.FromLastError(err) is { Code: "bad_config" } refused)
+                    {
+                        throw refused;
+                    }
+                    return false;
+                default:
+                    return null; // -1 no native dialog, -2 wrong thread
+            }
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(o);
+        }
+    }
+
+    /// <summary>The native library's version ("0.2.0").</summary>
     public static string Version => NativeMethods.Utf8(NativeMethods.Version());
 
     /// <summary>What the loaded native binary is (JSON: version, codec, os, arch, test_source).</summary>

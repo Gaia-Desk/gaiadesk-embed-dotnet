@@ -89,4 +89,46 @@ public class ConfigJsonTests
         Assert.Equal("unknown", GaiaDeskEmbedException.FromLastError("").Code);
         Assert.Equal("unknown", GaiaDeskEmbedException.FromLastError("not json").Code);
     }
+
+    [Fact]
+    public void Brand_keys_are_written_only_when_set()
+    {
+        var o = Parse(new EmbedOptions { EmbedToken = Token, BrandColor = "#0f766e", LogoPngBase64 = "iVBORw0KGgo=" }.ToConfigJson(true));
+        Assert.Equal("#0f766e", o.GetProperty("brand_color").GetString());
+        Assert.Equal("iVBORw0KGgo=", o.GetProperty("logo_png_base64").GetString());
+        Assert.DoesNotContain("brand_", new EmbedOptions { EmbedToken = Token }.ToConfigJson(true));
+        Assert.DoesNotContain("logo_", new EmbedOptions { EmbedToken = Token, LogoPngBase64 = "" }.ToConfigJson(true));
+    }
+
+    [Fact]
+    public void Logo_bytes_are_sent_as_base64()
+    {
+        var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+        var o = Parse(new EmbedOptions { EmbedToken = Token, LogoPng = png }.ToConfigJson(true));
+        Assert.Equal("iVBORw0KGgo=", o.GetProperty("logo_png_base64").GetString());
+        var both = new EmbedOptions { EmbedToken = Token, LogoPng = png, LogoPngBase64 = "iVBORw0KGgo=" };
+        Assert.Equal("bad_config", Assert.Throws<GaiaDeskEmbedException>(() => both.ToConfigJson(true)).Code);
+    }
+
+    [Theory]
+    [InlineData("0f766e")]
+    [InlineData("#0f766")]
+    [InlineData("#0f766eff")]
+    [InlineData("teal")]
+    [InlineData("#gggggg")]
+    [InlineData("")]
+    public void A_colour_that_is_not_rrggbb_is_bad_config(string color)
+    {
+        var e = Assert.Throws<GaiaDeskEmbedException>(() => new EmbedOptions { EmbedToken = Token, BrandColor = color }.ToConfigJson(true));
+        Assert.Equal("bad_config", e.Code);
+        Assert.Throws<GaiaDeskEmbedException>(() => new ConsentOptions { BrandColor = color }.ToJson());
+    }
+
+    [Fact]
+    public void Consent_options_json()
+    {
+        Assert.Equal("{\"capture\":\"window\",\"guided\":false}", new ConsentOptions().ToJson());
+        var c = new ConsentOptions { Company = "Acme", Capture = CaptureMode.Screen, Guided = true, BrandColor = "#112233", LogoPng = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A } };
+        Assert.Equal("{\"capture\":\"screen\",\"guided\":true,\"company\":\"Acme\",\"brand_color\":\"#112233\",\"logo_png_base64\":\"iVBORw0KGgo=\"}", c.ToJson());
+    }
 }

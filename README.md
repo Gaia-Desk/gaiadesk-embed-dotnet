@@ -23,14 +23,14 @@ is in front.
 ## Install
 
 The package is attached to this repository's
-[GitHub release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.1.0)
-(`GaiaDesk.Embed.0.1.0.nupkg`, with its `.sha256`). Download it into a folder and use that folder as
+[GitHub release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.2.0)
+(`GaiaDesk.Embed.0.2.0.nupkg`, with its `.sha256`). Download it into a folder and use that folder as
 a package source:
 
 ```sh
 mkdir -p packages
-curl -L -o packages/GaiaDesk.Embed.0.1.0.nupkg https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/download/v0.1.0/GaiaDesk.Embed.0.1.0.nupkg
-dotnet add package GaiaDesk.Embed --version 0.1.0 --source ./packages
+curl -L -o packages/GaiaDesk.Embed.0.2.0.nupkg https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/download/v0.2.0/GaiaDesk.Embed.0.2.0.nupkg
+dotnet add package GaiaDesk.Embed --version 0.2.0 --source ./packages
 ```
 
 (Or add `packages/` permanently with `dotnet nuget add source ./packages -n gaiadesk-local`.)
@@ -153,9 +153,35 @@ its answer. Never pass `true` without asking.
 | `WindowId` | The window to share: an HWND of **this** app (`Form.Handle`, `WindowInteropHelper.Handle`). Default: the app's frontmost. Another app's window is refused. |
 | `Guided` | Allow guided input (default `false`). |
 | `Fps` | 1 to 30 (default 15). |
+| `Masks` | Rects painted out from the very first frame (see Masking). |
+| `BrandColor` | `"#RRGGBB"`, the indicator's accent (see Branding). |
+| `LogoPngBase64` / `LogoPng` | Your logo, a PNG of at most 256 KiB, as base64 or bytes (one of them). |
 
 Refusals throw `GaiaDeskEmbedException`; `Code` is stable: `consent_required`, `bad_token`,
 `bad_config`, `bad_server`, …
+
+## Branding
+
+Your customer sees your brand, not ours: `Company` on the consent dialog and the indicator, plus
+(libgaiadesk_embed 0.2.0) your colour and logo.
+
+```csharp
+var logo = File.ReadAllBytes("logo.png");   // a PNG, at most 256 KiB
+var agreed = GaiaDeskEmbed.RequestConsent(new ConsentOptions
+{
+    Company = "Acme", Capture = CaptureMode.Window, BrandColor = "#0f766e", LogoPng = logo,
+});
+if (agreed != true) return;   // null: no native dialog here, show your own
+
+help = GaiaDeskEmbed.Start(
+    new EmbedOptions { EmbedToken = embedToken, Company = "Acme", BrandColor = "#0f766e", LogoPng = logo },
+    consentGranted: true, onEvent);
+```
+
+A colour that is not `#RRGGBB` throws `GaiaDeskEmbedException` (`bad_config`) before anything
+native runs; a logo the library refuses (not a PNG, over 256 KiB) throws `bad_config` from
+`RequestConsent` or `Start`, and is never read as a decline. `LogoPngBase64` takes the logo
+already base64-encoded.
 
 ## Masking
 
@@ -208,7 +234,7 @@ Get help button, a masked red "card number" panel and a Buy button that counts c
 mode on it). Windows only:
 
 ```powershell
-./scripts/fetch-binary.ps1 0.1.0
+./scripts/fetch-binary.ps1 0.2.0
 $env:GAIADESK_EMBED_TOKEN = "gdemb_…"
 dotnet run --project examples/HelpDeskDemo.WinForms
 ```
@@ -239,7 +265,7 @@ The WinForms example is not in the solution, so the library and tests build anyw
 
 ## Links
 
-- Package: `GaiaDesk.Embed.0.1.0.nupkg` on the [v0.1.0 release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.1.0) (NuGet.org once published)
+- Package: `GaiaDesk.Embed.0.2.0.nupkg` on the [v0.2.0 release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.2.0) (NuGet.org once published)
 - Guide: [Embedding GaiaDesk](https://gaiadesk.net/docs/embedding-gaiadesk) on gaiadesk.net
 - Embed SDKs: [Web](https://github.com/Gaia-Desk/gaiadesk-embed) · [Electron](https://github.com/Gaia-Desk/gaiadesk-embed-electron) · [macOS (Swift)](https://github.com/Gaia-Desk/gaiadesk-embed-swift) · [C/C++ and Qt](https://github.com/Gaia-Desk/gaiadesk-embed-cpp) · [.NET](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet) · [iOS](https://github.com/Gaia-Desk/gaiadesk-embed-ios) · [Android](https://github.com/Gaia-Desk/gaiadesk-embed-android) · [React Native](https://github.com/Gaia-Desk/gaiadesk-embed-react-native) · [Flutter](https://github.com/Gaia-Desk/gaiadesk-embed-flutter)
 - [Changelog](CHANGELOG.md) · [Security policy](https://github.com/Gaia-Desk/.github/blob/main/SECURITY.md)

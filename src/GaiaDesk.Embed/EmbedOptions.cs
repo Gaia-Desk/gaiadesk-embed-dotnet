@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace GaiaDesk.Embed;
 
@@ -51,6 +52,21 @@ public sealed record EmbedOptions
     /// <see cref="GaiaDeskEmbed.SetMaskedRects"/> replaces them later.
     /// </summary>
     public IReadOnlyList<EmbedRect>? Masks { get; init; }
+
+    /// <summary>
+    /// Your brand colour, <c>"#RRGGBB"</c>: the indicator's stripe and Stop
+    /// button; default the library's own. Needs libgaiadesk_embed 0.2.0.
+    /// </summary>
+    public string? BrandColor { get; init; }
+
+    /// <summary>
+    /// Your logo, a PNG (at most 256 KiB) as base64, shown small on the
+    /// indicator. Or set <see cref="LogoPng"/>, not both. Needs libgaiadesk_embed 0.2.0.
+    /// </summary>
+    public string? LogoPngBase64 { get; init; }
+
+    /// <summary>Your logo as PNG bytes (e.g. <c>File.ReadAllBytes("logo.png")</c>); the alternative to <see cref="LogoPngBase64"/>.</summary>
+    public byte[]? LogoPng { get; init; }
 
     internal static string CaptureName(CaptureMode c) => c switch
     {
@@ -105,8 +121,40 @@ public sealed record EmbedOptions
                 }
                 w.WriteEndArray();
             }
+            WriteBrand(w, BrandColor, LogoPngBase64, LogoPng);
             w.WriteEndObject();
         }
         return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    private static readonly Regex s_color = new("^#[0-9A-Fa-f]{6}$", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// <c>brand_color</c> and <c>logo_png_base64</c>, when set. The library
+    /// refuses a bad colour too; checking here names the property first.
+    /// </summary>
+    /// <exception cref="GaiaDeskEmbedException"><c>bad_config</c>: a colour that is not <c>#RRGGBB</c>, or both logo forms.</exception>
+    internal static void WriteBrand(Utf8JsonWriter w, string? color, string? logoBase64, byte[]? logo)
+    {
+        if (color is not null)
+        {
+            if (!s_color.IsMatch(color))
+            {
+                throw new GaiaDeskEmbedException("bad_config", $"BrandColor must be \"#RRGGBB\" (not \"{color}\")");
+            }
+            w.WriteString("brand_color", color);
+        }
+        if (logoBase64 is not null && logo is not null)
+        {
+            throw new GaiaDeskEmbedException("bad_config", "set LogoPngBase64 or LogoPng, not both");
+        }
+        if (logo is { Length: > 0 })
+        {
+            w.WriteString("logo_png_base64", Convert.ToBase64String(logo));
+        }
+        else if (!string.IsNullOrEmpty(logoBase64))
+        {
+            w.WriteString("logo_png_base64", logoBase64);
+        }
     }
 }
