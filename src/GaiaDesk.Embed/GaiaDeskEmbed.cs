@@ -17,7 +17,7 @@ using System.Threading;
 
 namespace GaiaDesk.Embed;
 
-/// <summary>One support session. Start it with <see cref="Start"/>; end it with <see cref="Stop"/> or <see cref="Dispose"/>.</summary>
+/// <summary>One support session. Start it with <see cref="Start(EmbedOptions, bool, Action{EmbedEvent}, SynchronizationContext?)"/>; end it with <see cref="Stop"/> or <see cref="Dispose"/>.</summary>
 public sealed class GaiaDeskEmbed : IDisposable
 {
     // One callback for every session, held by a static field so the GC never
@@ -224,7 +224,134 @@ public sealed class GaiaDeskEmbed : IDisposable
         }
     }
 
-    /// <summary>The native library's version ("0.3.0").</summary>
+    /// <summary>
+    /// Start after the consent step: the decision's token and receipt go with the join,
+    /// <see cref="EmbedOptions.Capture"/> becomes what the customer chose and
+    /// <see cref="EmbedOptions.Guided"/> stays on only if they allowed it. Anything but
+    /// <see cref="ConsentOutcome.Accepted"/> is refused (<c>consent_required</c>).
+    /// </summary>
+    /// <exception cref="GaiaDeskEmbedException">The library refused.</exception>
+    public static GaiaDeskEmbed Start(EmbedOptions options, ConsentDecision consent, Action<EmbedEvent> onEvent, SynchronizationContext? context = null)
+    {
+        ArgumentNullException.ThrowIfNull(consent);
+        return Start(Applying(consent, options), consent.Decision == ConsentOutcome.Accepted, onEvent, context);
+    }
+
+    /// <summary><paramref name="options"/> as Start with a decision starts it. Pure.</summary>
+    internal static EmbedOptions Applying(ConsentDecision consent, EmbedOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var o = options with { ConsentToken = consent.ConsentToken, ConsentReceipt = consent.Receipt };
+        return consent.Choices is { } ch ? o with { Capture = ch.Capture, Guided = o.Guided && ch.Guided } : o;
+    }
+
+    // The consent dialog's events arrive on the calling thread, before it returns.
+    private static readonly NativeMethods.GdEventFn s_onConsentEvent = OnConsentEvent;
+    private static readonly IntPtr s_onConsentEventPtr = Marshal.GetFunctionPointerForDelegate(s_onConsentEvent);
+
+    private static void OnConsentEvent(IntPtr userData, IntPtr eventJson)
+    {
+        if (userData == IntPtr.Zero || eventJson == IntPtr.Zero || GCHandle.FromIntPtr(userData).Target is not Action<EmbedEvent> handler)
+        {
+            return;
+        }
+        if (EmbedEvent.Parse(NativeMethods.Utf8(eventJson)) is { } ev)
+        {
+            try
+            {
+                handler(ev);
+            }
+            catch (Exception ex)
+            {
+                // Never unwind into native code.
+                var info = ExceptionDispatchInfo.Capture(ex);
+                ThreadPool.QueueUserWorkItem(static i => ((ExceptionDispatchInfo)i!).Throw(), info);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The consent step (libgaiadesk_embed 0.4.0): the library's dialog with a live preview of
+    /// what support will see, the customer's choices and localized wording. Modal; call it on
+    /// your UI thread (macOS: the main thread). <paramref name="onEvent"/> gets
+    /// <see cref="ConsentShownEvent"/> and <see cref="ConsentAcceptedEvent"/> /
+    /// <see cref="ConsentDeclinedEvent"/> on this thread, before it returns.
+    /// </summary>
+    /// <exception cref="GaiaDeskEmbedException"><c>bad_config</c> (refused options; no dialog), <c>wrong_thread</c> (macOS).</exception>
+    public static ConsentDecision Consent(ConsentStepOptions? options = null, Action<EmbedEvent>? onEvent = null)
+    {
+        var json = Marshal.StringToCoTaskMemUTF8((options ?? new ConsentStepOptions()).ToJson());
+        var handle = onEvent is null ? default : GCHandle.Alloc(onEvent);
+        try
+        {
+            var raw = NativeMethods.Consent(json, onEvent is null ? IntPtr.Zero : s_onConsentEventPtr, onEvent is null ? IntPtr.Zero : GCHandle.ToIntPtr(handle));
+            return DecisionOrThrow(raw);
+        }
+        finally
+        {
+            if (handle.IsAllocated)
+            {
+                handle.Free();
+            }
+            Marshal.FreeCoTaskMem(json);
+        }
+    }
+
+    /// <summary>
+    /// One frame of what support would see. Reads <see cref="ConsentStepOptions.Capture"/>,
+    /// <see cref="ConsentStepOptions.WindowId"/>, <see cref="ConsentStepOptions.ParentWindow"/> and
+    /// <see cref="ConsentStepOptions.Masks"/>.
+    /// </summary>
+    /// <exception cref="GaiaDeskEmbedException"><c>capture_unavailable</c> (no permission, no window), <c>bad_config</c>.</exception>
+    public static ConsentPreview Preview(ConsentStepOptions? options = null)
+    {
+        var json = Marshal.StringToCoTaskMemUTF8((options ?? new ConsentStepOptions()).ToPreviewJson());
+        try
+        {
+            var raw = NativeMethods.Preview(json);
+            if (raw == IntPtr.Zero)
+            {
+                throw GaiaDeskEmbedException.FromLastError(NativeMethods.Utf8(NativeMethods.LastError()));
+            }
+            var w = System.Text.Json.JsonSerializer.Deserialize(NativeMethods.Utf8(raw), ConsentJson.Default.PreviewWire)!;
+            return new ConsentPreview(Convert.FromBase64String(w.PngBase64), w.Width, w.Height, w.MaskedCount);
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(json);
+        }
+    }
+
+    /// <summary>
+    /// Your own (or an embedded) consent UI's answer, made a receipt by the library (surface
+    /// <c>embedded</c>). An accepted answer carries a <see cref="ConsentDecision.ConsentToken"/> for Start.
+    /// </summary>
+    /// <exception cref="GaiaDeskEmbedException"><c>bad_config</c> and the like.</exception>
+    public static ConsentDecision RecordConsent(ConsentAnswer answer)
+    {
+        ArgumentNullException.ThrowIfNull(answer);
+        var json = Marshal.StringToCoTaskMemUTF8(answer.ToJson());
+        try
+        {
+            return DecisionOrThrow(NativeMethods.RecordConsentEx(json));
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(json);
+        }
+    }
+
+    private static ConsentDecision DecisionOrThrow(IntPtr raw)
+    {
+        if (raw == IntPtr.Zero)
+        {
+            // Thread-local: read on this thread, right after the call.
+            throw GaiaDeskEmbedException.FromLastError(NativeMethods.Utf8(NativeMethods.LastError()));
+        }
+        return ConsentDecision.Parse(NativeMethods.Utf8(raw));
+    }
+
+    /// <summary>The native library's version ("0.4.0").</summary>
     public static string Version => NativeMethods.Utf8(NativeMethods.Version());
 
     /// <summary>What the loaded native binary is (JSON: version, codec, os, arch, test_source).</summary>

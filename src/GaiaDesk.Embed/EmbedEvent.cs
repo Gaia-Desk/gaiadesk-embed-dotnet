@@ -29,7 +29,7 @@ public abstract record EmbedEvent
             }
             return type switch
             {
-                "state" => new StateEvent(Str(o, "state") ?? string.Empty),
+                "state" => new StateEvent(Str(o, "state") ?? string.Empty) { Choices = Choices(o) },
                 "code" => new CodeEvent(Str(o, "code") ?? string.Empty, Str(o, "session_id") ?? string.Empty, Str(o, "mode") ?? "view", Time(o, "expires_at")),
                 "joined" => new JoinedEvent(Str(o, "agent")),
                 "left" => new LeftEvent(),
@@ -38,6 +38,9 @@ public abstract record EmbedEvent
                 "error" => new ErrorEvent(Str(o, "code") ?? string.Empty, Str(o, "message") ?? string.Empty),
                 "indicator_moved" => new IndicatorMovedEvent(Num(o, "x"), Num(o, "y")),
                 "ended" => new EndedEvent(Str(o, "reason") ?? string.Empty),
+                "consent_shown" => new ConsentShownEvent(Str(o, "locale") ?? string.Empty, Str(o, "wording_version") ?? string.Empty),
+                "consent_accepted" => Choices(o) is { } ch ? new ConsentAcceptedEvent(ch) : new UnknownEvent(type, json),
+                "consent_declined" => new ConsentDeclinedEvent(Str(o, "reason") ?? "declined"),
                 _ => new UnknownEvent(type, json),
             };
         }
@@ -46,6 +49,11 @@ public abstract record EmbedEvent
             return null;
         }
     }
+
+    private static ConsentChoices? Choices(JsonElement o) =>
+        o.TryGetProperty("choices", out var v) && v.ValueKind == JsonValueKind.Object
+            ? v.Deserialize(ConsentJson.Default.ConsentChoices)
+            : null;
 
     private static string? Str(JsonElement o, string key) =>
         o.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
@@ -65,6 +73,12 @@ public abstract record EmbedEvent
 /// <summary>The session's state: "starting", "waiting", "connected" or "ended".</summary>
 public sealed record StateEvent(string State) : EmbedEvent
 {
+    /// <summary>
+    /// On "waiting", when the consent step's choices went with the join: what the session runs
+    /// with. Needs libgaiadesk_embed 0.4.0.
+    /// </summary>
+    public ConsentChoices? Choices { get; init; }
+
     /// <inheritdoc />
     public override string Type => "state";
 }
@@ -125,12 +139,34 @@ public sealed record IndicatorMovedEvent(double X, double Y) : EmbedEvent
 /// <summary>
 /// The session ended: "stopped", "app_stopped", "customer_cancelled" (Cancel on the
 /// indicator, or Stop, before any agent was admitted; libgaiadesk_embed 0.3.0),
-/// "disconnected", "expired" or "error". Always last.
+/// "customer_declined" / "consent_timeout" (the consent receipt said no, or the dialog timed
+/// out; 0.4.0), "disconnected", "expired" or "error". Always last.
 /// </summary>
 public sealed record EndedEvent(string Reason) : EmbedEvent
 {
     /// <inheritdoc />
     public override string Type => "ended";
+}
+
+/// <summary>The consent step's dialog is up, in this locale and wording version (0.4.0).</summary>
+public sealed record ConsentShownEvent(string Locale, string WordingVersion) : EmbedEvent
+{
+    /// <inheritdoc />
+    public override string Type => "consent_shown";
+}
+
+/// <summary>The customer agreed in the consent step's dialog (0.4.0).</summary>
+public sealed record ConsentAcceptedEvent(ConsentChoices Choices) : EmbedEvent
+{
+    /// <inheritdoc />
+    public override string Type => "consent_accepted";
+}
+
+/// <summary>The customer said no in the consent step's dialog: "declined" or "timeout" (0.4.0).</summary>
+public sealed record ConsentDeclinedEvent(string Reason) : EmbedEvent
+{
+    /// <inheritdoc />
+    public override string Type => "consent_declined";
 }
 
 /// <summary>An event type this version of the wrapper does not know; <see cref="Json"/> is the raw event.</summary>

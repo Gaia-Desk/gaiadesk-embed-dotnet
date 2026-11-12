@@ -12,7 +12,7 @@
     <IsTrimmable>true</IsTrimmable>
 
     <PackageId>GaiaDesk.Embed</PackageId>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Authors>GaiaDesk</Authors>
     <Company>GaiaDesk</Company>
     <Description>A "Get help" button for your Windows desktop app: share your app's window with your support team through GaiaDesk, with consent, masking and optional guided input. .NET wrapper over the native libgaiadesk_embed library.</Description>

@@ -55,6 +55,15 @@ internal static class NativeMethods
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "gd_embed_show_consent_ex")]
     internal static extern int ShowConsentEx(IntPtr optionsJson);
 
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "gd_embed_consent")]
+    internal static extern IntPtr Consent(IntPtr optionsJson, IntPtr onEvent, IntPtr userData);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "gd_embed_preview")]
+    internal static extern IntPtr Preview(IntPtr optionsJson);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "gd_embed_record_consent_ex")]
+    internal static extern IntPtr RecordConsentEx(IntPtr json);
+
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, EntryPoint = "gd_embed_last_error")]
     internal static extern IntPtr LastError();
 

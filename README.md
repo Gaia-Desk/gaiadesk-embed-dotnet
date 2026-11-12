@@ -23,14 +23,14 @@ is in front.
 ## Install
 
 The package is attached to this repository's
-[GitHub release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.3.0)
-(`GaiaDesk.Embed.0.3.0.nupkg`, with its `.sha256`). Download it into a folder and use that folder as
+[GitHub release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.4.0)
+(`GaiaDesk.Embed.0.4.0.nupkg`, with its `.sha256`). Download it into a folder and use that folder as
 a package source:
 
 ```sh
 mkdir -p packages
-curl -L -o packages/GaiaDesk.Embed.0.3.0.nupkg https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/download/v0.3.0/GaiaDesk.Embed.0.3.0.nupkg
-dotnet add package GaiaDesk.Embed --version 0.3.0 --source ./packages
+curl -L -o packages/GaiaDesk.Embed.0.4.0.nupkg https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/download/v0.4.0/GaiaDesk.Embed.0.4.0.nupkg
+dotnet add package GaiaDesk.Embed --version 0.4.0 --source ./packages
 ```
 
 (Or add `packages/` permanently with `dotnet nuget add source ./packages -n gaiadesk-local`.)
@@ -68,21 +68,22 @@ GaiaDeskEmbed? help;
 
 void GetHelp_Click(object? sender, EventArgs e)
 {
-    // The library's dialog; null means "no native dialog here": ask with your own.
-    var agreed = GaiaDeskEmbed.RequestConsent("Acme")
-        ?? MessageBox.Show(this, "Share this window with Acme support?", "Acme",
-               MessageBoxButtons.YesNo) == DialogResult.Yes;
-    if (!agreed) return;
-
-    // Mask the card number panel from the very first frame.
+    // Mask the card number panel from the very first frame (and in the consent preview).
     var s = cardPanel.RectangleToScreen(cardPanel.ClientRectangle);
     var card = EmbedRect.FromScreenRect(Handle, (s.X, s.Y, s.Width, s.Height));
 
     try
     {
+        // The library's consent step: a preview of exactly what support sees, a receipt.
+        var consent = GaiaDeskEmbed.Consent(new ConsentStepOptions
+        {
+            Company = "Acme", Masked = true, ParentWindow = Handle, WindowId = Handle, Masks = new[] { card },
+        });
+        if (consent.Decision != ConsentOutcome.Accepted) return; // declined, timeout (or unavailable: see Consent)
+
         help = GaiaDeskEmbed.Start(
             new EmbedOptions { EmbedToken = embedToken, Company = "Acme", WindowId = Handle, Masks = new[] { card } },
-            consentGranted: true,
+            consent,
             OnHelpEvent,
             SynchronizationContext.Current); // events arrive on the UI thread
     }
@@ -135,6 +136,53 @@ Declare per-monitor DPI awareness in your `app.manifest` so those are true physi
 
 ## Consent
 
+### The consent step (recommended)
+
+Use the library's consent step, `GaiaDeskEmbed.Consent(ConsentStepOptions)` (libgaiadesk_embed
+0.4.0), rather than `consentGranted: true` after a dialog of your own. It gives you, with no UI
+to build:
+
+- a **live preview** of exactly what support will see, masked fields already black;
+- **per-session choices** for the customer: allow click-and-type or keep it view-only, share app
+  logs, one window or the whole screen (each only when you offer it);
+- a **consent receipt** (who agreed to what, when, to which wording, hashed), stored on the
+  support session and shown in the console;
+- wording **localized** into 14 languages (or your own), and an **accessible** dialog: keyboard
+  only, Enter accepts, Esc declines, screen reader (UI Automation) names, reduced motion.
+
+```csharp
+var consent = GaiaDeskEmbed.Consent(new ConsentStepOptions
+{
+    Company = "Acme", Guided = true, Masked = true, ParentWindow = Handle, WindowId = Handle, Masks = masks,
+    Theme = new ConsentTheme { Accent = "#0f766e", Radius = 12 },
+    Choices = new ConsentOffers { OfferGuided = true, OfferLogs = true },
+    PrivacyUrl = "https://acme.example/privacy",
+    Server = "https://gaiadesk.net", EmbedToken = embedToken, SessionId = sessionId, // the library posts the receipt, shows who is waiting
+}, e => Debug.WriteLine(e));                      // ConsentShownEvent, ConsentAcceptedEvent / ConsentDeclinedEvent
+
+switch (consent.Decision)
+{
+    case ConsentOutcome.Accepted:
+        help = GaiaDeskEmbed.Start(options, consent, OnHelpEvent, SynchronizationContext.Current);
+        break;
+    case ConsentOutcome.Unavailable: // no native dialog here: ask with your own, then RecordConsent
+        break;
+    default: // Declined, Timeout: the receipt says so; the session leaves the queue
+        break;
+}
+```
+
+`Start(options, consent, …)` sends the decision's `ConsentToken` and `ConsentReceipt` with the
+join and starts with what the customer chose (their capture; `Guided` only if they allowed it).
+Call `Consent` on your UI thread (macOS: the main thread, else `wrong_thread`); refused options
+throw `bad_config` and show no dialog, never a decline. `Preview(options)` returns the same
+picture (`ConsentPreview`: PNG bytes, size, masked count) for a UI of your own, and
+`RecordConsent(ConsentAnswer)` turns your own UI's answer (decision, choices, the strings you
+showed) into the same `ConsentDecision` and receipt. Sessions that end because of the consent step
+end with `customer_declined` or `consent_timeout`.
+
+### Your own dialog
+
 `Start` takes `consentGranted`: your user's answer to a consent dialog. The library refuses to
 start without it (`GaiaDeskEmbedException` with `Code == "consent_required"`), before it looks
 at anything else. Use the library's own dialog, `GaiaDeskEmbed.RequestConsent(company, capture,
@@ -158,6 +206,7 @@ its answer. Never pass `true` without asking.
 | `LogoPngBase64` / `LogoPng` | Your logo, a PNG of at most 256 KiB, as base64 or bytes (one of them). |
 | `ParentWindow` | The calling window (an HWND); the indicator is placed clear of it. Default: the focused window. (libgaiadesk_embed 0.3.0) |
 | `IndicatorPosition` | The corner the indicator starts in: `TopLeft`, `TopRight` (default), `BottomLeft`, `BottomRight`. (0.3.0) |
+| `ConsentToken`, `ConsentReceipt` | From `Consent` / `RecordConsent`; `Start(options, consent, …)` sets both. (0.4.0) |
 | `IndicatorOrigin` | Where the customer last dragged the indicator (from an `IndicatorMovedEvent` you stored); restored while it fits on a screen. (0.3.0) |
 
 Refusals throw `GaiaDeskEmbedException`; `Code` is stable: `consent_required`, `bad_token`,
@@ -221,7 +270,7 @@ UI). `EndedEvent` is always the last event, exactly once.
 
 | Event | Fields | |
 |---|---|---|
-| `StateEvent` | `State` | `starting`, `waiting`, `connected`, `ended` |
+| `StateEvent` | `State`, `Choices` | `starting`, `waiting`, `connected`, `ended`; on `waiting`, `Choices` is what the consent step let the session do (0.4.0) |
 | `CodeEvent` | `Code`, `SessionId`, `Mode`, `ExpiresAt` | The support code to read to your agent; `Mode` is `view` or `cobrowse` |
 | `JoinedEvent` | `Agent` | An agent joined (their email, when known) |
 | `LeftEvent` | | The agent left |
@@ -229,7 +278,10 @@ UI). `EndedEvent` is always the last event, exactly once.
 | `ActionEvent` | `Action`, `Applied`, `Reason` | A guided action, and why it was not applied |
 | `ErrorEvent` | `Code`, `Message` | A problem during the session |
 | `IndicatorMovedEvent` | `X`, `Y` | The customer dragged the indicator: store it and pass it back as `IndicatorOrigin` (0.3.0) |
-| `EndedEvent` | `Reason` | `stopped`, `app_stopped`, `customer_cancelled` (Cancel or `Stop` before an agent was admitted; 0.3.0), `disconnected`, `expired`, `error` |
+| `ConsentShownEvent` | `Locale`, `WordingVersion` | `Consent`'s dialog is up (0.4.0; to `Consent`'s handler) |
+| `ConsentAcceptedEvent` | `Choices` | The customer agreed (0.4.0; to `Consent`'s handler) |
+| `ConsentDeclinedEvent` | `Reason` | `declined` or `timeout` (0.4.0; to `Consent`'s handler) |
+| `EndedEvent` | `Reason` | `stopped`, `app_stopped`, `customer_cancelled` (Cancel or `Stop` before an agent was admitted; 0.3.0), `customer_declined` / `consent_timeout` (the consent step said no or timed out; 0.4.0), `disconnected`, `expired`, `error` |
 | `UnknownEvent` | `Type`, `Json` | An event type newer than this wrapper |
 
 `Stop()` (or `Dispose()`) ends the session; it is safe to call more than once and from an event
@@ -242,7 +294,7 @@ Get help button, a masked red "card number" panel and a Buy button that counts c
 mode on it). Windows only:
 
 ```powershell
-./scripts/fetch-binary.ps1 0.3.0
+./scripts/fetch-binary.ps1 0.4.0
 $env:GAIADESK_EMBED_TOKEN = "gdemb_…"
 dotnet run --project examples/HelpDeskDemo.WinForms
 ```
@@ -273,7 +325,7 @@ The WinForms example is not in the solution, so the library and tests build anyw
 
 ## Links
 
-- Package: `GaiaDesk.Embed.0.3.0.nupkg` on the [v0.3.0 release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.3.0) (NuGet.org once published)
+- Package: `GaiaDesk.Embed.0.4.0.nupkg` on the [v0.4.0 release](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet/releases/tag/v0.4.0) (NuGet.org once published)
 - Guide: [Embedding GaiaDesk](https://gaiadesk.net/docs/embedding-gaiadesk) on gaiadesk.net
 - Embed SDKs: [Web](https://github.com/Gaia-Desk/gaiadesk-embed) · [Electron](https://github.com/Gaia-Desk/gaiadesk-embed-electron) · [macOS (Swift)](https://github.com/Gaia-Desk/gaiadesk-embed-swift) · [C/C++ and Qt](https://github.com/Gaia-Desk/gaiadesk-embed-cpp) · [.NET](https://github.com/Gaia-Desk/gaiadesk-embed-dotnet) · [iOS](https://github.com/Gaia-Desk/gaiadesk-embed-ios) · [Android](https://github.com/Gaia-Desk/gaiadesk-embed-android) · [React Native](https://github.com/Gaia-Desk/gaiadesk-embed-react-native) · [Flutter](https://github.com/Gaia-Desk/gaiadesk-embed-flutter)
 - [Changelog](CHANGELOG.md) · [Security policy](https://github.com/Gaia-Desk/.github/blob/main/SECURITY.md)

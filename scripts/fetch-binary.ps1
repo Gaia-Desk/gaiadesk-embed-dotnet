@@ -3,7 +3,7 @@
   Download the native gaiadesk_embed.dll for a release into runtimes/win-x64/native/.
 
 .EXAMPLE
-  ./scripts/fetch-binary.ps1 0.3.0
+  ./scripts/fetch-binary.ps1 0.4.0
 #>
 param(
     [Parameter(Mandatory = $true, Position = 0)]

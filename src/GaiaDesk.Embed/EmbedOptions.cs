@@ -104,6 +104,18 @@ public sealed record EmbedOptions
     /// </summary>
     public IndicatorPoint? IndicatorOrigin { get; init; }
 
+    /// <summary>
+    /// The consent step's token (<see cref="ConsentDecision.ConsentToken"/>); Start with a
+    /// <see cref="ConsentDecision"/> sets it. Needs libgaiadesk_embed 0.4.0.
+    /// </summary>
+    public string? ConsentToken { get; init; }
+
+    /// <summary>
+    /// The consent step's receipt (<see cref="ConsentDecision.Receipt"/>), sent with the join; Start
+    /// with a <see cref="ConsentDecision"/> sets it. Needs libgaiadesk_embed 0.4.0.
+    /// </summary>
+    public ConsentReceipt? ConsentReceipt { get; init; }
+
     internal static string PositionName(IndicatorPosition p) => p switch
     {
         GaiaDesk.Embed.IndicatorPosition.TopLeft => "top-left",
@@ -183,6 +195,15 @@ public sealed record EmbedOptions
                 w.WriteNumber("x", at.X);
                 w.WriteNumber("y", at.Y);
                 w.WriteEndObject();
+            }
+            if (ConsentToken is not null)
+            {
+                w.WriteString("consent_token", ConsentToken);
+            }
+            if (ConsentReceipt is not null)
+            {
+                w.WritePropertyName("consent_receipt");
+                JsonSerializer.Serialize(w, ConsentReceipt, ConsentJson.Default.ConsentReceipt);
             }
             w.WriteEndObject();
         }
