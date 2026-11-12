@@ -36,6 +36,7 @@ public abstract record EmbedEvent
                 "control" => new ControlEvent(Bool(o, "allowed")),
                 "action" => new ActionEvent(Str(o, "action") ?? string.Empty, Bool(o, "applied"), Str(o, "reason")),
                 "error" => new ErrorEvent(Str(o, "code") ?? string.Empty, Str(o, "message") ?? string.Empty),
+                "indicator_moved" => new IndicatorMovedEvent(Num(o, "x"), Num(o, "y")),
                 "ended" => new EndedEvent(Str(o, "reason") ?? string.Empty),
                 _ => new UnknownEvent(type, json),
             };
@@ -51,6 +52,9 @@ public abstract record EmbedEvent
 
     private static bool Bool(JsonElement o, string key) =>
         o.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.True;
+
+    private static double Num(JsonElement o, string key) =>
+        o.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : 0;
 
     private static DateTimeOffset? Time(JsonElement o, string key) =>
         o.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var s)
@@ -107,7 +111,22 @@ public sealed record ErrorEvent(string Code, string Message) : EmbedEvent
     public override string Type => "error";
 }
 
-/// <summary>The session ended: "stopped", "app_stopped", "disconnected", "expired" or "error". Always last.</summary>
+/// <summary>
+/// The customer dragged the indicator to (<see cref="X"/>, <see cref="Y"/>), in screen
+/// coordinates. Keep it and pass it back as <see cref="EmbedOptions.IndicatorOrigin"/>
+/// next time. Needs libgaiadesk_embed 0.3.0.
+/// </summary>
+public sealed record IndicatorMovedEvent(double X, double Y) : EmbedEvent
+{
+    /// <inheritdoc />
+    public override string Type => "indicator_moved";
+}
+
+/// <summary>
+/// The session ended: "stopped", "app_stopped", "customer_cancelled" (Cancel on the
+/// indicator, or Stop, before any agent was admitted; libgaiadesk_embed 0.3.0),
+/// "disconnected", "expired" or "error". Always last.
+/// </summary>
 public sealed record EndedEvent(string Reason) : EmbedEvent
 {
     /// <inheritdoc />

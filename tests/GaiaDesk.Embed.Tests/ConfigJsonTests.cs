@@ -131,4 +131,41 @@ public class ConfigJsonTests
         var c = new ConsentOptions { Company = "Acme", Capture = CaptureMode.Screen, Guided = true, BrandColor = "#112233", LogoPng = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A } };
         Assert.Equal("{\"capture\":\"screen\",\"guided\":true,\"company\":\"Acme\",\"brand_color\":\"#112233\",\"logo_png_base64\":\"iVBORw0KGgo=\"}", c.ToJson());
     }
+
+    [Fact]
+    public void Indicator_and_parent_window_keys()
+    {
+        var opts = new EmbedOptions
+        {
+            EmbedToken = Token,
+            ParentWindow = (nint)140230000,
+            IndicatorPosition = IndicatorPosition.BottomLeft,
+            IndicatorOrigin = new IndicatorPoint(10.5, -20),
+        };
+        var o = Parse(opts.ToConfigJson(true));
+        Assert.Equal(new[] { "embed_token", "consent_granted", "capture", "guided", "parent_window", "indicator_position", "indicator_origin" }, Keys(o));
+        Assert.Equal(140230000UL, o.GetProperty("parent_window").GetUInt64());
+        Assert.Equal("bottom-left", o.GetProperty("indicator_position").GetString());
+        var at = o.GetProperty("indicator_origin");
+        Assert.Equal(new[] { "x", "y" }, Keys(at));
+        Assert.Equal((10.5, -20.0), (at.GetProperty("x").GetDouble(), at.GetProperty("y").GetDouble()));
+    }
+
+    [Theory]
+    [InlineData(IndicatorPosition.TopLeft, "top-left")]
+    [InlineData(IndicatorPosition.TopRight, "top-right")]
+    [InlineData(IndicatorPosition.BottomLeft, "bottom-left")]
+    [InlineData(IndicatorPosition.BottomRight, "bottom-right")]
+    public void Indicator_position_names(IndicatorPosition pos, string name)
+    {
+        var o = Parse(new EmbedOptions { EmbedToken = Token, IndicatorPosition = pos }.ToConfigJson(true));
+        Assert.Equal(name, o.GetProperty("indicator_position").GetString());
+    }
+
+    [Fact]
+    public void Consent_masked_and_parent_window_only_when_set()
+    {
+        Assert.Equal("{\"capture\":\"window\",\"guided\":false,\"masked\":true,\"parent_window\":5}", new ConsentOptions { Masked = true, ParentWindow = (nint)5 }.ToJson());
+        Assert.Equal("{\"capture\":\"window\",\"guided\":false}", new ConsentOptions { Masked = false }.ToJson());
+    }
 }

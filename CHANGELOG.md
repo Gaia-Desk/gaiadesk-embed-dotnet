@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+- `libgaiadesk_embed` 0.3.0: `EmbedOptions.ParentWindow` (the calling window's HWND; the indicator
+  is placed clear of it), `EmbedOptions.IndicatorPosition` (a screen corner) and
+  `EmbedOptions.IndicatorOrigin` (where the customer last dragged the indicator).
+- `ConsentOptions.Masked` (the dialog says private fields stay hidden) and
+  `ConsentOptions.ParentWindow` (the dialog is owned by your window, never behind it).
+- New `IndicatorMovedEvent` (`X`, `Y`): keep it and pass it back as `IndicatorOrigin`.
+- `EndedEvent.Reason` can be `customer_cancelled`: Cancel on the indicator, or `Stop`, before any
+  agent was admitted.
+
 ## 0.2.0
 
 - `libgaiadesk_embed` 0.2.0: white-label branding. `EmbedOptions.BrandColor` (`#RRGGBB`) and

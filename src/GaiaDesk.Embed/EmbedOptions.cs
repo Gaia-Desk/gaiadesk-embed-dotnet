@@ -18,6 +18,22 @@ public enum CaptureMode
     Screen,
 }
 
+/// <summary>Where the sharing indicator starts (libgaiadesk_embed 0.3.0).</summary>
+public enum IndicatorPosition
+{
+    /// <summary>Top left of the screen.</summary>
+    TopLeft,
+    /// <summary>Top right (the library's default, clear of the calling window).</summary>
+    TopRight,
+    /// <summary>Bottom left.</summary>
+    BottomLeft,
+    /// <summary>Bottom right.</summary>
+    BottomRight,
+}
+
+/// <summary>A point in screen coordinates: where the customer last dragged the indicator.</summary>
+public readonly record struct IndicatorPoint(double X, double Y);
+
 /// <summary>How a support session starts. Only <see cref="EmbedToken"/> is required.</summary>
 public sealed record EmbedOptions
 {
@@ -68,6 +84,44 @@ public sealed record EmbedOptions
     /// <summary>Your logo as PNG bytes (e.g. <c>File.ReadAllBytes("logo.png")</c>); the alternative to <see cref="LogoPngBase64"/>.</summary>
     public byte[]? LogoPng { get; init; }
 
+    /// <summary>
+    /// The calling window (an HWND, e.g. <c>Form.Handle</c>): the indicator is placed
+    /// clear of it. Ignored unless it is this app's; default: its focused window.
+    /// Needs libgaiadesk_embed 0.3.0.
+    /// </summary>
+    public nint? ParentWindow { get; init; }
+
+    /// <summary>
+    /// The screen corner the indicator starts in; default (null) top right, clear
+    /// of the calling window. Needs libgaiadesk_embed 0.3.0.
+    /// </summary>
+    public IndicatorPosition? IndicatorPosition { get; init; }
+
+    /// <summary>
+    /// Where the customer last dragged the indicator: an <see cref="IndicatorMovedEvent"/>
+    /// you kept (<c>new(e.X, e.Y)</c>), restored while it fits on a screen. The library
+    /// writes nothing to disk; storing it is yours. Needs libgaiadesk_embed 0.3.0.
+    /// </summary>
+    public IndicatorPoint? IndicatorOrigin { get; init; }
+
+    internal static string PositionName(IndicatorPosition p) => p switch
+    {
+        GaiaDesk.Embed.IndicatorPosition.TopLeft => "top-left",
+        GaiaDesk.Embed.IndicatorPosition.TopRight => "top-right",
+        GaiaDesk.Embed.IndicatorPosition.BottomLeft => "bottom-left",
+        GaiaDesk.Embed.IndicatorPosition.BottomRight => "bottom-right",
+        _ => throw new ArgumentOutOfRangeException(nameof(p), p, "indicator position is a screen corner"),
+    };
+
+    /// <summary>An HWND / NSWindow* as the unsigned integer the library reads.</summary>
+    internal static void WriteWindow(Utf8JsonWriter w, string key, nint? window)
+    {
+        if (window is { } id)
+        {
+            w.WriteNumber(key, unchecked((ulong)(long)id));
+        }
+    }
+
     internal static string CaptureName(CaptureMode c) => c switch
     {
         CaptureMode.Window => "window",
@@ -97,11 +151,7 @@ public sealed record EmbedOptions
                 w.WriteString("company", Company);
             }
             w.WriteString("capture", CaptureName(Capture));
-            if (WindowId is { } id)
-            {
-                // An HWND is a pointer-sized handle; the library reads it as an unsigned integer.
-                w.WriteNumber("window_id", unchecked((ulong)(long)id));
-            }
+            WriteWindow(w, "window_id", WindowId);
             w.WriteBoolean("guided", Guided);
             if (Fps is { } fps)
             {
@@ -122,6 +172,18 @@ public sealed record EmbedOptions
                 w.WriteEndArray();
             }
             WriteBrand(w, BrandColor, LogoPngBase64, LogoPng);
+            WriteWindow(w, "parent_window", ParentWindow);
+            if (IndicatorPosition is { } pos)
+            {
+                w.WriteString("indicator_position", PositionName(pos));
+            }
+            if (IndicatorOrigin is { } at)
+            {
+                w.WriteStartObject("indicator_origin");
+                w.WriteNumber("x", at.X);
+                w.WriteNumber("y", at.Y);
+                w.WriteEndObject();
+            }
             w.WriteEndObject();
         }
         return Encoding.UTF8.GetString(ms.ToArray());

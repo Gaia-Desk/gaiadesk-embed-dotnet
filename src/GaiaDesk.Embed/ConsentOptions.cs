@@ -28,6 +28,15 @@ public sealed record ConsentOptions
     /// <summary>The logo as PNG bytes; the alternative to <see cref="LogoPngBase64"/>.</summary>
     public byte[]? LogoPng { get; init; }
 
+    /// <summary>Say private fields stay hidden (you pass masks). Needs libgaiadesk_embed 0.3.0.</summary>
+    public bool Masked { get; init; }
+
+    /// <summary>
+    /// The calling window (an HWND, e.g. <c>Form.Handle</c>): the dialog is owned by it,
+    /// never behind it. Default: the app's focused window. Needs libgaiadesk_embed 0.3.0.
+    /// </summary>
+    public nint? ParentWindow { get; init; }
+
     /// <summary>The JSON <c>gd_embed_show_consent_ex</c> takes; unset keys are left out.</summary>
     internal string ToJson()
     {
@@ -42,6 +51,12 @@ public sealed record ConsentOptions
                 w.WriteString("company", Company);
             }
             EmbedOptions.WriteBrand(w, BrandColor, LogoPngBase64, LogoPng);
+            // Only when set, so 0.2.0 libraries (which refuse unknown keys) still take the default.
+            if (Masked)
+            {
+                w.WriteBoolean("masked", true);
+            }
+            EmbedOptions.WriteWindow(w, "parent_window", ParentWindow);
             w.WriteEndObject();
         }
         return Encoding.UTF8.GetString(ms.ToArray());

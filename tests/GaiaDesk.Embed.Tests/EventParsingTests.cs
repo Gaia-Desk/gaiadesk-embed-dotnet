@@ -68,6 +68,7 @@ public class EventParsingTests
     [Theory]
     [InlineData("stopped")]
     [InlineData("app_stopped")]
+    [InlineData("customer_cancelled")]
     [InlineData("disconnected")]
     [InlineData("expired")]
     [InlineData("error")]
@@ -76,6 +77,17 @@ public class EventParsingTests
         var e = Assert.IsType<EndedEvent>(EmbedEvent.Parse($"{{\"reason\":\"{reason}\",\"type\":\"ended\"}}"));
         Assert.Equal(reason, e.Reason);
         Assert.Equal("ended", e.Type);
+    }
+
+    [Fact]
+    public void Indicator_moved()
+    {
+        var e = Assert.IsType<IndicatorMovedEvent>(EmbedEvent.Parse("{\"type\":\"indicator_moved\",\"x\":1200.5,\"y\":-40}"));
+        Assert.Equal(new IndicatorMovedEvent(1200.5, -40), e);
+        Assert.Equal("indicator_moved", e.Type);
+        // What an app stores and passes back as IndicatorOrigin.
+        var o = new EmbedOptions { EmbedToken = "gdemb_x", IndicatorOrigin = new(e.X, e.Y) }.ToConfigJson(true);
+        Assert.Contains("\"indicator_origin\":{\"x\":1200.5,\"y\":-40}", o);
     }
 
     [Fact]

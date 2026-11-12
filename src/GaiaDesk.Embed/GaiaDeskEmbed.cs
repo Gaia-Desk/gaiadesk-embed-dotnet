@@ -224,7 +224,7 @@ public sealed class GaiaDeskEmbed : IDisposable
         }
     }
 
-    /// <summary>The native library's version ("0.2.0").</summary>
+    /// <summary>The native library's version ("0.3.0").</summary>
     public static string Version => NativeMethods.Utf8(NativeMethods.Version());
 
     /// <summary>What the loaded native binary is (JSON: version, codec, os, arch, test_source).</summary>
